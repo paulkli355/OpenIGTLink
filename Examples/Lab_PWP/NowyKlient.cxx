@@ -101,7 +101,35 @@ int main(int argc, char* argv[])
   // Send
   socket->Send(pointMsg->GetPackPointer(), pointMsg->GetPackSize());
   
-  
+  for(;;)
+  {
+    if (socket.IsNotNull()) // if client connected
+    {
+      igtl::MessageHeader::Pointer headerMsg;
+      headerMsg = igtl::MessageHeader::New();
+
+      headerMsg->InitPack();
+
+      bool timeout(false);
+      igtlUint64 r = socket->Receive(headerMsg->GetPackPointer(), headerMsg->GetPackSize(), timeout);
+      if (r == 0)
+      {
+        socket->CloseSocket();
+      }
+      if (r != headerMsg->GetPackSize())
+      {
+        continue;
+      }
+
+      headerMsg->Unpack();
+      if (strcmp(headerMsg->GetDeviceType(), "POINT") == 0)
+      {
+        ReceiveTransform(socket, headerMsg);
+      }
+    }
+    std::cerr << "Connection lost" << std::endl;
+    break;
+  }
   //------------------------------------------------------------
   // Close the socket
   socket->CloseSocket();
