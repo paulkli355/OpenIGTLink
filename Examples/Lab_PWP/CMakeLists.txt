@@ -1,4 +1,4 @@
-PROJECT(Receiver)
+PROJECT(Lab_PWP)
 
 cmake_minimum_required(VERSION 2.4)
 if(COMMAND cmake_policy)

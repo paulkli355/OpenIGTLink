@@ -145,7 +145,9 @@ int main(int argc, char* argv[])
 #if OpenIGTLink_PROTOCOL_VERSION >= 2
         else if (strcmp(headerMsg->GetDeviceType(), "POINT") == 0)
           {
-          ReceivePoint(socket, headerMsg);
+            igtl::Sleep(2000);
+            ReceivePoint(socket, headerMsg);
+            break;
           }
         else if (strcmp(headerMsg->GetDeviceType(), "TRAJ") == 0)
           {
@@ -172,6 +174,7 @@ int main(int argc, char* argv[])
           socket->Skip(headerMsg->GetBodySizeToRead(), 0);
           }
         }
+      break;
       }
     }
     
@@ -383,7 +386,24 @@ int ReceivePoint(igtl::Socket * socket, igtl::MessageHeader * header)
       std::cerr << " Radius    : " << std::fixed << pointElement->GetRadius() << std::endl;
       std::cerr << " Owner     : " << pointElement->GetOwner() << std::endl;
       std::cerr << "================================" << std::endl;
+
+      for (size_t i = 0; i < 3; i++)
+      {
+          pos[i] *= -1;
       }
+
+      std::cerr << "Positions after modifications: (" << std::fixed << pos[0] << ", " << pos[1] << ", " << pos[2] << ")" << std::endl;
+      
+      igtl::PointMessage::Pointer pointMsg;
+      pointMsg = igtl::PointMessage::New();
+      pointMsg->SetDeviceName("PointSender");
+      pointElement->SetPosition(pos[0], pos[1], pos[2]);
+      pointMsg->AddPointElement(pointElement);
+      pointMsg->Pack();
+      socket->Send(pointMsg->GetPackPointer(), pointMsg->GetPackSize());
+      igtl::Sleep(1000);
+
+    }
     }
 
   return 1;

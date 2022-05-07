@@ -18,7 +18,7 @@
 #include "igtlOSUtil.h"
 #include "igtlPointMessage.h"
 #include "igtlClientSocket.h"
-
+#include "igtlServerSocket.h"
 
 int main(int argc, char* argv[])
 {
@@ -101,34 +101,36 @@ int main(int argc, char* argv[])
   // Send
   socket->Send(pointMsg->GetPackPointer(), pointMsg->GetPackSize());
   
-  for(;;)
-  {
-    if (socket.IsNotNull()) // if client connected
-    {
-      igtl::MessageHeader::Pointer headerMsg;
-      headerMsg = igtl::MessageHeader::New();
+  while(true) {
 
-      headerMsg->InitPack();
+      if (socket.IsNotNull()) {
+          igtl::MessageHeader::Pointer headerMsg;
+          headerMsg = igtl::MessageHeader::New();
+          headerMsg->InitPack();
+          bool timeout(false);
+          r = socket->Receive(headerMsg->GetPackPointer(), headerMsg->GetPackSize(), timeout);
 
-      bool timeout(false);
-      igtlUint64 r = socket->Receive(headerMsg->GetPackPointer(), headerMsg->GetPackSize(), timeout);
-      if (r == 0)
-      {
-        socket->CloseSocket();
-      }
-      if (r != headerMsg->GetPackSize())
-      {
-        continue;
-      }
+          if (r != headerMsg->GetPackSize()) {
+              continue;
+          }
 
-      headerMsg->Unpack();
-      if (strcmp(headerMsg->GetDeviceType(), "POINT") == 0)
-      {
-        ReceiveTransform(socket, headerMsg);
+          headerMsg->Unpack();
+
+          igtl::PointMessage::Pointer pointMsg;
+          pointMsg = igtl::PointMessage::New();
+          pointMsg->SetMessageHeader(headerMsg);
+          pointMsg->AllocatePack();
+
+          socket->Receive(pointMsg->GetPackBodyPointer(), pointMsg->GetPackBodySize(), timeout);
+          pointMsg->Unpack();
+
+          igtl::PointElement::Pointer pointElement;
+          pointMsg->GetPointElement(0, pointElement);
+
+          igtlFloat32 pos[3];
+          pointElement->GetPosition(pos);
+          std::cerr << "Position: (" << std::fixed << pos[0] << ", " << pos[1] << ", " << pos[2] << ")" << std::endl;
       }
-    }
-    std::cerr << "Connection lost" << std::endl;
-    break;
   }
   //------------------------------------------------------------
   // Close the socket
